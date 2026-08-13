@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的个人网站</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e8eaed; min-height: 100vh; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #161a23; border-bottom: 1px solid #2a2f3a; }
+header h1 { font-size: 20px; }
+.nav { display: flex; gap: 12px; align-items: center; }
+.nav a, .nav button { color: #e8eaed; text-decoration: none; border: none; background: none; cursor: pointer; font-size: 14px; padding: 6px 10px; border-radius: 6px; }
+.nav a:hover, .nav button:hover { background: #2a2f3a; }
+main { max-width: 960px; margin: 0 auto; padding: 24px; }
+section { background: #161a23; border: 1px solid #2a2f3a; border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+section h2 { font-size: 18px; margin-bottom: 16px; color: #fff; }
+.hidden { display: none; }
+/* 登录区 */
+#authBox { text-align: center; padding: 40px 0; }
+.auth-btn { background: #4f8cff; color: #fff; border: none; padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 0 6px; }
+.auth-btn:hover { background: #3a73e8; }
+/* 音乐 */
+.player { display: flex; flex-direction: column; gap: 12px; }
+.song-list { display: flex; flex-direction: column; gap: 8px; }
+.song-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #1e232e; border-radius: 8px; }
+audio { width: 100%; }
+/* 网址 */
+.link-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.link-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: #1e232e; border-radius: 10px; text-decoration: none; color: #e8eaed; transition: background .2s; }
+.link-card:hover { background: #2a2f3a; }
+.link-card .favicon { width: 32px; height: 32px; border-radius: 6px; object-fit: contain; }
+.link-card .title { font-size: 14px; font-weight: 500; }
+.link-controls { display: flex; gap: 8px; margin-top: 8px; }
+.link-controls button { background: #2a2f3a; color: #e8eaed; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.empty { color: #7c8291; font-size: 14px; }
+/* 表单 */
+form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+input { background: #1e232e; border: 1px solid #2a2f3a; color: #e8eaed; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+input:focus { outline: none; border-color: #4f8cff; }
+button.primary { background: #4f8cff; color: #fff; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+button.primary:hover { background: #3a73e8; }
+.error { color: #ff6b6b; font-size: 13px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 我的个人网站</h1>
+  <nav class="nav" id="topNav"></nav>
+</header>
+
+<main>
+  <!-- 未登录 -->
+  <div id="authBox">
+    <h2>欢迎访问</h2>
+    <p style="margin:12px 0; color:#7c8291;">请登录后使用音乐与网址功能</p>
+    <button class="auth-btn" onclick="location.href='login.html'">登录</button>
+    <button class="auth-btn" onclick="location.href='register.html'">注册</button>
+  </div>
+
+  <!-- 已登录内容 -->
+  <section id="musicSection" class="hidden">
+    <h2>🎵 音乐播放</h2>
+    <div class="player">
+      <div class="song-list" id="songList"></div>
+      <audio id="audioPlayer" controls style="display:none"></audio>
+    </div>
+  </section>
+
+  <section id="linkSection" class="hidden">
+    <h2>🔗 网址收藏</h2>
+    <div class="link-grid" id="linkGrid"></div>
+    <form id="addLinkForm">
+      <input id="linkTitle" placeholder="网站标题" required>
+      <input id="linkUrl" placeholder="https://网址" required>
+      <input id="linkIcon" placeholder="图标URL(可选)">
+      <button type="submit" class="primary">添加网址</button>
+    </form>
+    <div class="error" id="linkError"></div>
+  </section>
+</main>
+
+<script>
+let currentUser = null;
+
+// 会话保持 + 自动登录
+(async function init() {
+  try {
+    const r = await fetch('/api/me');
+    if (r.ok) {
+      currentUser = await r.json();
+      showApp();
+    } else {
+      showAuth();
+    }
+  } catch { showAuth(); }
+})();
+
+function showAuth() {
+  document.getElementById('authBox').style.display = 'block';
+  document.getElementById('musicSection').classList.add('hidden');
+  document.getElementById('linkSection').classList.add('hidden');
+  renderNav(false);
+}
+
+function showApp() {
+  document.getElementById('authBox').style.display = 'none';
+  document.getElementById('musicSection').classList.remove('hidden');
+  document.getElementById('linkSection').classList.remove('hidden');
+  renderNav(true);
+  loadSongs();
+  loadLinks();
+}
+
+function renderNav(loggedIn) {
+  const nav = document.getElementById('topNav');
+  if (!loggedIn) {
+    nav.innerHTML = '<a href="login.html">登录</a><a href="register.html">注册</a>';
+  } else {
+    nav.innerHTML = `<span>👤 ${currentUser.name}</span>
+      <a href="dashboard.html">个人中心</a>
+      <button onclick="logout()">退出</button>`;
+  }
+}
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  location.href = 'index.html';
+}
+
+// 音乐
+async function loadSongs() {
+  const r = await fetch('/api/songs');
+  const data = await r.json();
+  const list = document.getElementById('songList');
+  const player = document.getElementById('audioPlayer');
+  if (!data.songs || data.songs.length === 0) {
+    list.innerHTML = '<div class="empty">暂无歌曲，管理员可上传音乐到 music/ 文件夹</div>';
+    return;
+  }
+  list.innerHTML = '';
+  data.songs.forEach(song => {
+    const div = document.createElement('div');
+    div.className = 'song-item';
+    div.innerHTML = `<span>🎵 ${song.title}${song.artist ? ' - ' + song.artist : ''}</span>
+      <button class="primary" onclick="playSong('${song.src}')">播放</button>`;
+    list.appendChild(div);
+    // 播放器
+    player.src = data.songs[0].src;
+    player.style.display = 'block';
+  });
+}
+function playSong(src) {
+  const player = document.getElementById('audioPlayer');
+  player.src = src;
+  player.play();
+}
+
+// 网址
+async function loadLinks() {
+  const r = await fetch('/api/links');
+  if (!r.ok) { document.getElementById('linkGrid').innerHTML = '<div class="empty">加载失败</div>'; return; }
+  const data = await r.json();
+  const grid = document.getElementById('linkGrid');
+  grid.innerHTML = '';
+  if (!data.links || data.links.length === 0) {
+    grid.innerHTML = '<div class="empty">暂无网址</div>';
+    return;
+  }
+  data.links.forEach(link => {
+    const card = document.createElement('div');
+    card.className = 'link-card';
+    const favicon = link.icon || `https://www.google.com/s2/favicons?domain=${new URL(link.url).hostname}`;
+    card.innerHTML = `
+      <a href="${link.url}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;flex:1;">
+        <img class="favicon" src="${favicon}" onerror="this.style.display='none'">
+        <span class="title">${link.title}</span>
+      </a>
+      <div class="link-controls">
+        <button onclick="editLink(${link.id})">✏️</button>
+        <button onclick="deleteLink(${link.id})">🗑️</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+function editLink(id) {
+  const title = prompt('修改标题');
+  if (title === null) return;
+  const url = prompt('修改网址');
+  if (url === null) return;
+  fetch('/api/linksUpdate', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id, title, url}) })
+    .then(() => loadLinks());
+}
+function deleteLink(id) {
+  if (!confirm('确认删除该网址？')) return;
+  fetch('/api/linksDelete', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id}) })
+    .then(() => loadLinks());
+}
+
+document.getElementById('addLinkForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const title = document.getElementById('linkTitle').value;
+  const url = document.getElementById('linkUrl').value;
+  const icon = document.getElementById('linkIcon').value;
+  const r = await fetch('/api/linksAdd', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({title, url, icon}) });
+  const data = await r.json();
+  if (!r.ok) { document.getElementById('linkError').textContent = data.error; return; }
+  document.getElementById('linkError').textContent = '';
+  e.target.reset();
+  loadLinks();
+});
+</script>
+</body>
+</html>

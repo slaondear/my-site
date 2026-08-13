@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>个人中心</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #0f1117; color: #e8eaed; min-height: 100vh; }
+header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #161a23; border-bottom: 1px solid #2a2f3a; }
+header h1 { font-size: 20px; }
+header a { color: #4f8cff; text-decoration: none; font-size: 14px; }
+main { max-width: 480px; margin: 0 auto; padding: 24px; }
+.card { background: #161a23; border: 1px solid #2a2f3a; border-radius: 12px; padding: 24px; margin-bottom: 16px; }
+.card h2 { font-size: 16px; margin-bottom: 16px; }
+.info { display: flex; gap: 8px; font-size: 15px; margin-bottom: 16px; }
+.label { color: #7c8291; }
+form { display: flex; flex-direction: column; gap: 12px; }
+input { background: #1e232e; border: 1px solid #2a2f3a; color: #e8eaed; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+input:focus { outline: none; border-color: #4f8cff; }
+button { background: #4f8cff; color: #fff; border: none; padding: 11px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+button:hover { background: #3a73e8; }
+button.danger { background: #e5484d; }
+button.danger:hover { background: #c93a3f; }
+.error, .success { font-size: 13px; min-height: 18px; }
+.error { color: #ff6b6b; }
+.success { color: #4fd16b; }
+</style>
+</head>
+<body>
+<header>
+  <h1>👤 个人中心</h1>
+  <a href="index.html">← 返回首页</a>
+</header>
+<main id="main">
+  <div class="card">
+    <h2>账号信息</h2>
+    <div class="info"><span class="label">用户名：</span><span id="displayName">-</span></div>
+    <div class="info"><span class="label">角色：</span><span id="displayRole">-</span></div>
+  </div>
+
+  <div class="card">
+    <h2>✏️ 修改用户名</h2>
+    <form id="nameForm">
+      <input id="newName" placeholder="新用户名" required>
+      <div class="error" id="nameErr"></div>
+      <button type="submit">保存用户名</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>🔑 修改密码</h2>
+    <form id="passForm">
+      <input id="oldPass" type="password" placeholder="原密码" required>
+      <input id="newPass" type="password" placeholder="新密码(至少6位)" required>
+      <div class="error" id="passErr"></div>
+      <div class="success" id="passOk"></div>
+      <button type="submit">保存新密码</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <button class="danger" style="width:100%" onclick="logout()">退出登录</button>
+  </div>
+</main>
+<script>
+(async function init() {
+  const r = await fetch('/api/me');
+  if (!r.ok) { location.href = 'login.html'; return; }
+  const user = await r.json();
+  document.getElementById('displayName').textContent = user.name;
+  document.getElementById('displayRole').textContent = user.role === 'admin' ? '管理员' : '普通用户';
+})();
+
+document.getElementById('nameForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const newName = document.getElementById('newName').value;
+  const r = await fetch('/api/changeName', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({newName}) });
+  const data = await r.json();
+  const err = document.getElementById('nameErr');
+  if (!r.ok) { err.textContent = data.error; return; }
+  err.textContent = '';
+  document.getElementById('displayName').textContent = newName;
+  document.getElementById('newName').value = '';
+  alert('用户名已更新');
+});
+
+document.getElementById('passForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const oldPassword = document.getElementById('oldPass').value;
+  const newPassword = document.getElementById('newPass').value;
+  const r = await fetch('/api/changePassword', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({oldPassword, newPassword}) });
+  const data = await r.json();
+  const err = document.getElementById('passErr');
+  const ok = document.getElementById('passOk');
+  err.textContent = ''; ok.textContent = '';
+  if (!r.ok) { err.textContent = data.error; return; }
+  e.target.reset();
+  ok.textContent = '密码已更新';
+});
+
+async function logout() {
+  await fetch('/api/logout', { method: 'POST' });
+  location.href = 'index.html';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注册</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #0f1117; color: #e8eaed; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+.card { background: #161a23; border: 1px solid #2a2f3a; border-radius: 14px; padding: 36px 32px; width: 360px; }
+.card h1 { font-size: 22px; text-align: center; margin-bottom: 24px; }
+form { display: flex; flex-direction: column; gap: 14px; }
+input { background: #1e232e; border: 1px solid #2a2f3a; color: #e8eaed; padding: 11px 12px; border-radius: 8px; font-size: 14px; }
+input:focus { outline: none; border-color: #4f8cff; }
+button { background: #4f8cff; color: #fff; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+button:hover { background: #3a73e8; }
+.error { color: #ff6b6b; font-size: 13px; min-height: 18px; }
+.link { text-align: center; margin-top: 16px; font-size: 14px; }
+.link a { color: #4f8cff; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📝 注册</h1>
+  <form id="regForm">
+    <input id="name" placeholder="用户名" required>
+    <input id="password" type="password" placeholder="密码(至少6位)" required>
+    <div class="error" id="err"></div>
+    <button type="submit">注册</button>
+  </form>
+  <div class="link">已有账号？<a href="login.html">去登录</a></div>
+  <div class="link"><a href="index.html">← 返回首页</a></div>
+</div>
+<script>
+document.getElementById('regForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('name').value;
+  const password = document.getElementById('password').value;
+  const r = await fetch('/api/register', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, password})
+  });
+  const data = await r.json();
+  if (!r.ok) { document.getElementById('err').textContent = data.error; return; }
+  location.href = 'login.html';
+});
+</script>
+</body>
+</html>

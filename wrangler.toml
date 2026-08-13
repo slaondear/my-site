@@ -1,0 +1,14 @@
+# Cloudflare Pages 项目配置（部署时请在 Dashboard 绑定 D1 与 KV）
+name = "my-site"
+pages_build_output_dir = "."
+
+# D1 数据库绑定
+[[d1_databases]]
+binding = "DB"
+database_name = "firstd1"
+database_id = "2dc026ae-6fc7-4901-a662-8954a7a83234"
+
+# KV 会话存储绑定
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "c92a4a6c17ea489d96a4c955302c47c3"
